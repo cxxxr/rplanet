@@ -1,15 +1,26 @@
 (defpackage :rplanet/repository
-  (:use :cl :rplanet/repository-interface)
-  (:export :repository))
+  (:use :cl :rplanet/entities)
+  (:local-nicknames (:i-repository :rplanet/repository-interface))
+  (:export :make-db
+           :repository))
 (in-package :rplanet/repository)
 
-(defvar *db* (make-hash-table))
+(defun make-db ()
+  (make-hash-table))
+
+(defvar *db* (make-db))
 
 (defclass repository () ())
 
-(defmethod create ((repository repository) entity)
+(defmethod i-repository:create ((repository repository) entity)
   (push entity (gethash (type-of entity) *db* nil)))
 
-(defmethod collect ((repository repository) entity-name &rest args)
+(defmethod i-repository:collect ((repository repository) entity-name &rest args)
   (declare (ignore args))
   (gethash entity-name *db*))
+
+(defmethod i-repository:find ((repository repository) (entity-name (eql 'column)) &rest args)
+  (destructuring-bind (&key name) args
+    (find name (gethash entity-name *db*)
+          :test #'string=
+          :key #'column-name)))
