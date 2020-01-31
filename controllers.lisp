@@ -20,12 +20,12 @@
 (defun post-column (params)
   (trivia:ematch params
     ((alist ("name" . name))
-     (let ((column (rplanet/presenters:add-column name)))
+     (let ((column (rplanet/usecases:add-column name)))
        (render-json `(("name" . ,(rplanet/entities:column-name column))))))))
 
 (defun get-columns (params)
   (declare (ignore params))
-  (let ((columns (rplanet/presenters:get-columns)))
+  (let ((columns (rplanet/usecases:get-columns)))
     (render-json (acons "children"
                         (map 'vector
                              (lambda (column)
@@ -38,7 +38,7 @@
     ((alist ("column_name" . column-name)
             ("title" . title)
             ("text" . text))
-     (let ((task (rplanet/presenters:add-task :column-name column-name
+     (let ((task (rplanet/usecases:add-task :column-name column-name
                                               :title title
                                               :text text)))
        (render-json `(("column_name" . ,(rplanet/entities:task-column-name task))
@@ -47,4 +47,4 @@
 
 (defun get-tasks (params)
   (declare (ignore params))
-  (rplanet/presenters:get-tasks))
+  (rplanet/usecases:get-tasks))

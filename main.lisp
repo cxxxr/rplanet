@@ -1,5 +1,7 @@
 (defpackage :rplanet/main
-  (:use :cl))
+  (:use :cl)
+  (:export :start
+           :stop))
 (in-package :rplanet/main)
 
 (setq rplanet/repository-interface:*interface* (make-instance 'rplanet/repository:repository))

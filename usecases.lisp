@@ -1,4 +1,4 @@
-(defpackage :rplanet/presenters
+(defpackage :rplanet/usecases
   (:use :cl
         :rplanet/entities)
   (:local-nicknames (:i-repository :rplanet/repository-interface))
@@ -11,7 +11,7 @@
            :get-columns
            :add-task
            :get-tasks))
-(in-package :rplanet/presenters)
+(in-package :rplanet/usecases)
 
 (define-condition rplanet-error (simple-error)
   ())
