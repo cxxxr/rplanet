@@ -9,6 +9,7 @@
 (in-package :rplanet)
 
 (setf (symbol-function '<modal>) js:-modal)
+(js:-modal.set-app-element #j"#root")
 
 (defun alist-to-object (alist)
   (apply #'ffi::%object
@@ -127,6 +128,25 @@
   (jsx (<modal> (:is-open (if enable #j:true #j:false))
                 (<task-input> (:on-input on-input)))))
 
+(defstruct modal-state
+  type
+  value
+  on-input)
+
+(defun handle-task-input (modal-state text on-responsed)
+  (then (request "/tasks"
+                 :method :post
+                 :content `((:title . ,text)
+                            (:column_name . ,(modal-state-value modal-state))))
+        (lambda (response)
+          ((ffi:ref response :json)))
+        (lambda (response)
+          (funcall on-responsed response))))
+
+(defmacro fn (&body body)
+  `(lambda (&rest args)
+     ,@body))
+
 (define-react-component <app> ()
   (with-state ((tasks set-tasks #())
                (columns set-columns #())
@@ -143,26 +163,32 @@
           (<task-adding-modal> (:enable modal-state
                                 :on-input (lambda (text)
                                             (set-modal-state nil)
-                                            (then (request "/tasks"
-                                                           :method :post
-                                                           :content `((:title . ,text)
-                                                                      (:column_name . ,modal-state)))
-                                                  (lambda (response)
-                                                    ((ffi:ref response :json)))
-                                                  (lambda (response)
-                                                    (set-require-update-p t))))))
-          (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
-           (map-with-index (lambda (column column-index)
-                             (jsx (<column> (:column column
-                                             :key column-index
-                                             :tasks tasks
-                                             :on-add-task (lambda (column-name)
-                                                            (set-modal-state column-name))))))
-                           columns))))))
+                                            (funcall (modal-state-on-input modal-state)
+                                                     modal-state
+                                                     text
+                                                     (fn (set-require-update-p t))))))
+          (:div (:style (ffi:object :display #j"flex" :flex-direction #j"column"))
+           (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
+            (map-with-index (lambda (column column-index)
+                              (jsx (<column> (:column column
+                                              :key column-index
+                                              :tasks tasks
+                                              :on-add-task (lambda (column-name)
+                                                             (set-modal-state
+                                                              (make-modal-state
+                                                               :type :add-task
+                                                               :value column-name
+                                                               :on-input #'handle-task-input)))))))
+                            columns))
+           #+(or)
+           (:button (:on-click (lambda (e)
+                                 (declare (ignore e))
+                                 (set-modal-state
+                                  (make-modal-state :type :add-column))))
+            "Add column"))))))
 
 (setup #'<app> "root")
 
-#+(or)
 (valtan.remote-eval:connect
  (lambda ()
    (setup #'<app> "root")))

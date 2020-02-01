@@ -16,7 +16,6 @@
                 path
                 nil))
     :root (asdf:system-relative-pathname :rplanet #P"public/"))
-   :accesslog
    (call-next-method)))
 
 (defvar *app* (make-instance 'app))
