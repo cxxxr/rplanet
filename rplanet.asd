@@ -1,6 +1,7 @@
 (defsystem "rplanet"
-  :depends-on ("ningle" "trivia" "clack" "jonathan")
+  :depends-on ("ningle" "trivia" "clack" "st-json")
   :serial t
+  :pathname "server"
   :components ((:file "entities")
                (:file "repository-interface")
                (:file "usecases")
@@ -11,5 +12,5 @@
 (defsystem "rplanet-tests"
   :depends-on ("rove" "rplanet")
   :serial t
-  :pathname "tests"
+  :pathname "server/tests"
   :components ((:file "usecases")))

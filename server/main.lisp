@@ -6,9 +6,23 @@
 
 (setq rplanet/repository-interface:*interface* (make-instance 'rplanet/repository:repository))
 
-(defvar *app* (make-instance 'ningle:app))
+(defclass app (ningle:app) ())
+
+(defmethod lack.component:to-app ((app app))
+  (lack.builder:builder
+   (:static
+    :path (lambda (path)
+            (if (ppcre:scan "^(?:/assets/|/robot\\.txt$|/favicon\\.ico$)" path)
+                path
+                nil))
+    :root (asdf:system-relative-pathname :rplanet #P"public/"))
+   :accesslog
+   (call-next-method)))
+
+(defvar *app* (make-instance 'app))
 (defvar *handler* nil)
 
+(setf (ningle:route *app* "/" :method :GET) (asdf:system-relative-pathname :rplanet #p"public/assets/index.html"))
 (setf (ningle:route *app* "/columns" :method :POST) 'rplanet/controllers:post-column)
 (setf (ningle:route *app* "/columns" :method :GET) 'rplanet/controllers:get-columns)
 (setf (ningle:route *app* "/tasks" :method :POST) 'rplanet/controllers:post-task)
