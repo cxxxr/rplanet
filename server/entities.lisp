@@ -5,7 +5,8 @@
            :task
            :task-title
            :task-text
-           :task-column-name))
+           :task-column-name
+           :task-priority))
 (in-package :rplanet/entities)
 
 (defclass column ()
@@ -22,4 +23,8 @@
     :accessor task-text)
    (column-name
     :initarg :column-name
-    :accessor task-column-name)))
+    :accessor task-column-name)
+   (priority
+    :initarg :priority
+    :initform (error "Missing :priority")
+    :accessor task-priority)))

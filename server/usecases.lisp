@@ -47,11 +47,15 @@
                       (text ""))
   (unless (i-repository:find i-repository:*interface* 'column :name column-name)
     (error 'missing-column :name column-name))
-  (i-repository:create i-repository:*interface*
-                       (make-instance 'task
-                                      :column-name column-name
-                                      :title title
-                                      :text text)))
+  (let ((n (length (i-repository:collect i-repository:*interface* 'task)))) ;TODO: i-repository:count
+    (i-repository:create i-repository:*interface*
+                         (make-instance 'task
+                                        :column-name column-name
+                                        :title title
+                                        :text text
+                                        :priority (1+ n)))))
 
 (defun get-tasks ()
-  (i-repository:collect i-repository:*interface* 'task))
+  (sort (i-repository:collect i-repository:*interface* 'task)
+        #'>
+        :key #'task-priority))
