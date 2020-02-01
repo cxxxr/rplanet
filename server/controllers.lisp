@@ -6,48 +6,61 @@
            :get-tasks))
 (in-package :rplanet/controllers)
 
-(trivia:defpattern alist (&rest args)
-  `(and ,@(mapcar (trivia.level0:lambda-match0
-                    ((cons key pattern)
-                     `(assoc ,key ,pattern :test #'equal)))
-                  args)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun lisp-variable-to-request-parameter-name (name)
+    (format nil "~{~(~A~)~^_~}" (uiop:split-string (string name) :separator "-"))))
+
+(defmacro with-params (bindings params &body body)
+  (alexandria:once-only (params)
+    `(let ,(mapcar (lambda (b)
+                     (destructuring-bind
+                           (var &key (key (lisp-variable-to-request-parameter-name var))
+                                default)
+                         (alexandria:ensure-list b)
+                       `(,var (assoc-utils:aget ,params ,key ,default))))
+                   bindings)
+       ,@body)))
 
 (defun alist-to-jso (alist)
   (st-json::make-jso :alist alist))
 
-(defun render-json (alist &key (status 200))
+(defun render-json (jso &key (status 200))
   (list status
         `(:content-type "application/json")
-        (list (st-json:write-json-to-string (alist-to-jso alist)))))
+        (list (st-json:write-json-to-string jso))))
 
 (defun post-column (params)
-  (trivia:ematch params
-    ((alist ("name" . name))
-     (let ((column (rplanet/usecases:add-column name)))
-       (render-json `(("name" . ,(rplanet/entities:column-name column))))))))
+  (with-params (name) params
+    (let ((column (rplanet/usecases:add-column name)))
+      (render-json (st-json:jso "name" (rplanet/entities:column-name column))))))
 
 (defun get-columns (params)
   (declare (ignore params))
   (let ((columns (rplanet/usecases:get-columns)))
-    (render-json (acons "children"
-                        (map 'vector
-                             (lambda (column)
-                               (acons "column" (rplanet/entities:column-name column) nil))
-                             columns)
-                        nil))))
+    (render-json
+     (st-json:jso "children" (mapcar (lambda (column)
+                                       (st-json:jso "name"
+                                                    (rplanet/entities:column-name column)))
+                                     columns)))))
 
 (defun post-task (params)
-  (trivia:ematch params
-    ((alist ("column_name" . column-name)
-            ("title" . title)
-            ("text" . text))
-     (let ((task (rplanet/usecases:add-task :column-name column-name
-                                            :title title
-                                            :text text)))
-       (render-json `(("column_name" . ,(rplanet/entities:task-column-name task))
-                      ("title" . ,(rplanet/entities:task-title task))
-                      ("text" . ,(rplanet/entities:task-text task))))))))
+  (with-params (column-name
+                title
+                (text :default ""))
+      params
+    (let ((task (rplanet/usecases:add-task :column-name column-name
+                                           :title title
+                                           :text text)))
+      (render-json (st-json:jso "column_name" (rplanet/entities:task-column-name task)
+                                "title" (rplanet/entities:task-title task)
+                                "text" (rplanet/entities:task-text task))))))
 
 (defun get-tasks (params)
   (declare (ignore params))
-  (rplanet/usecases:get-tasks))
+  (render-json
+   (st-json:jso "children"
+                (mapcar (lambda (task)
+                          (st-json:jso "title" (rplanet/entities:task-title task)
+                                       "text" (rplanet/entities:task-text task)
+                                       "column_name" (rplanet/entities:task-column-name task)))
+                        (rplanet/usecases:get-tasks)))))
