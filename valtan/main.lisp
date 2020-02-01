@@ -71,6 +71,18 @@
 (defparameter +column-width+ 400)
 (defparameter +column-padding+ 10)
 
+(define-react-component <task> (item)
+  (jsx (:article (:style (ffi:object :background #j"#efefef"
+                                     :padding #j(format nil "~Apx ~Apx 0px 0px"
+                                                        +column-padding+
+                                                        +column-padding+)))
+        (:div (:style (ffi:object
+                       :width +column-width+
+                       :height 200
+                       :background #j"white"))
+         (:span ()
+          (ffi:ref item :title))))))
+
 (define-react-component <tasklist> (column tasks on-add-task)
   (jsx (:article (:style (ffi:object :background #j"#efefef"
                                      :padding #j(format nil "~Apx 0px ~Apx ~Apx"
@@ -91,17 +103,7 @@
                                        (funcall on-add-task column-name)))
                   "+"))
                 (map-with-index (lambda (item i)
-                                  (jsx (:article (:key i
-                                                  :style (ffi:object :background #j"#efefef"
-                                                                     :padding #j(format nil "~Apx ~Apx 0px 0px"
-                                                                                        +column-padding+
-                                                                                        +column-padding+)))
-                                        (:div (:style (ffi:object
-                                                       :width +column-width+
-                                                       :height 200
-                                                       :background #j"white"))
-                                         (:span ()
-                                          (ffi:ref item :title))))))
+                                  (jsx (<task> (:key i :item item))))
                                 tasks)))))))
 
 (define-react-component <task-input> (on-input)
@@ -187,7 +189,6 @@
      (lambda ()
        (set-require-update-p nil)
        (fetch-data #'set-tasks #'set-columns)
-       ;; XXX: useEffectの中では関数以外を返してはいけないのでundefinedを返す
        #j:undefined)
      (ffi:array require-update-p))
     (jsx (:div ()
