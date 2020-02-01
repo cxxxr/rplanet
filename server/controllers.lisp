@@ -12,10 +12,13 @@
                      `(assoc ,key ,pattern :test #'equal)))
                   args)))
 
+(defun alist-to-jso (alist)
+  (st-json::make-jso :alist alist))
+
 (defun render-json (alist &key (status 200))
   (list status
         `(:content-type "application/json")
-        (list (jojo:to-json alist :from :alist))))
+        (list (st-json:write-json-to-string (alist-to-jso alist)))))
 
 (defun post-column (params)
   (trivia:ematch params
@@ -39,8 +42,8 @@
             ("title" . title)
             ("text" . text))
      (let ((task (rplanet/usecases:add-task :column-name column-name
-                                              :title title
-                                              :text text)))
+                                            :title title
+                                            :text text)))
        (render-json `(("column_name" . ,(rplanet/entities:task-column-name task))
                       ("title" . ,(rplanet/entities:task-title task))
                       ("text" . ,(rplanet/entities:task-text task))))))))
