@@ -178,18 +178,17 @@
                                                        text
                                                        (fn (set-require-update-p t)))))))
           (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
-           (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
-            (map-with-index (lambda (column column-index)
-                              (jsx (<column> (:column column
-                                              :key column-index
-                                              :tasks tasks
-                                              :on-add-task (lambda (column-name)
-                                                             (set-modal-state
-                                                              (make-modal-state
-                                                               :type :add-task
-                                                               :value column-name
-                                                               :on-input #'handle-task-input)))))))
-                            columns))
+           (map-with-index (lambda (column column-index)
+                             (jsx (<column> (:column column
+                                             :key column-index
+                                             :tasks tasks
+                                             :on-add-task (lambda (column-name)
+                                                            (set-modal-state
+                                                             (make-modal-state
+                                                              :type :add-task
+                                                              :value column-name
+                                                              :on-input #'handle-task-input)))))))
+                           columns)
            (:button (:on-click (lambda (e)
                                  (declare (ignore e))
                                  (set-modal-state
