@@ -68,34 +68,10 @@
            (funcall function elt (incf i)))
          sequence)))
 
-(define-react-component <task-input> (on-input)
-  (with-state ((value set-value #j""))
-    (flet ((handle-submit (e)
-             ((ffi:ref e :prevent-default))
-             (funcall on-input (ffi:js->cl value)))
-           (handle-change (e)
-             (set-value (ffi:ref e :target :value))))
-      (jsx (:form (:on-submit #'handle-submit)
-            (:input (:on-change #'handle-change)))))))
-
 (defparameter +column-width+ 400)
 (defparameter +column-padding+ 10)
 
-(defun fetch-data (set-tasks set-columns)
-  (then (request "/columns" :method :get)
-        (lambda (response)
-          ((ffi:ref response :json)))
-        (lambda (response)
-          (let ((columns (ffi:js->cl (ffi:ref response :children))))
-            (funcall set-columns columns))))
-  (then (request "/tasks" :method :get)
-        (lambda (response)
-          ((ffi:ref response :json)))
-        (lambda (response)
-          (let ((tasks (ffi:js->cl (ffi:ref response :children))))
-            (funcall set-tasks tasks)))))
-
-(define-react-component <column> (column tasks on-add-task)
+(define-react-component <tasklist> (column tasks on-add-task)
   (jsx (:article (:style (ffi:object :background #j"#efefef"
                                      :padding #j(format nil "~Apx 0px ~Apx ~Apx"
                                                         +column-padding+
@@ -128,6 +104,16 @@
                                           (ffi:ref item :title))))))
                                 tasks)))))))
 
+(define-react-component <task-input> (on-input)
+  (with-state ((value set-value #j""))
+    (flet ((handle-submit (e)
+             ((ffi:ref e :prevent-default))
+             (funcall on-input (ffi:js->cl value)))
+           (handle-change (e)
+             (set-value (ffi:ref e :target :value))))
+      (jsx (:form (:on-submit #'handle-submit)
+            (:input (:on-change #'handle-change)))))))
+
 (define-react-component <task-adding-modal> (enable on-input)
   (jsx (<modal> (:is-open (if enable #j:true #j:false))
                 (<task-input> (:on-input on-input)))))
@@ -156,6 +142,42 @@
         (lambda (response)
           (funcall on-responsed response))))
 
+(define-react-component <tasktable> (columns tasks on-add-task)
+  (jsx (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
+        (map-with-index (lambda (column column-index)
+                          (jsx (<tasklist> (:column column
+                                            :key column-index
+                                            :tasks tasks
+                                            :on-add-task (lambda (column-name)
+                                                           (funcall on-add-task
+                                                                    (make-modal-state
+                                                                     :type :add-task
+                                                                     :value column-name
+                                                                     :on-input #'handle-task-input)))))))
+                        columns))))
+
+(define-react-component <add-column-button> (on-add-column)
+  (jsx (:button (:on-click (lambda (e)
+                             (declare (ignore e))
+                             (funcall on-add-column
+                                      (make-modal-state :type :add-column
+                                                        :on-input #'handle-column-input))))
+        "Add column")))
+
+(defun fetch-data (set-tasks set-columns)
+  (then (request "/columns" :method :get)
+        (lambda (response)
+          ((ffi:ref response :json)))
+        (lambda (response)
+          (let ((columns (ffi:js->cl (ffi:ref response :children))))
+            (funcall set-columns columns))))
+  (then (request "/tasks" :method :get)
+        (lambda (response)
+          ((ffi:ref response :json)))
+        (lambda (response)
+          (let ((tasks (ffi:js->cl (ffi:ref response :children))))
+            (funcall set-tasks tasks)))))
+
 (define-react-component <app> ()
   (with-state ((tasks set-tasks #())
                (columns set-columns #())
@@ -165,8 +187,8 @@
      (lambda ()
        (set-require-update-p nil)
        (fetch-data #'set-tasks #'set-columns)
-       ;; XXX: useEffectの中では関数以外を返してはいけないので、何もしないfinallize関数を返す
-       (lambda ()))
+       ;; XXX: useEffectの中では関数以外を返してはいけないのでundefinedを返す
+       #j:undefined)
      (ffi:array require-update-p))
     (jsx (:div ()
           (<task-adding-modal> (:enable modal-state
@@ -178,23 +200,10 @@
                                                        text
                                                        (fn (set-require-update-p t)))))))
           (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
-           (map-with-index (lambda (column column-index)
-                             (jsx (<column> (:column column
-                                             :key column-index
-                                             :tasks tasks
-                                             :on-add-task (lambda (column-name)
-                                                            (set-modal-state
-                                                             (make-modal-state
-                                                              :type :add-task
-                                                              :value column-name
-                                                              :on-input #'handle-task-input)))))))
-                           columns)
-           (:button (:on-click (lambda (e)
-                                 (declare (ignore e))
-                                 (set-modal-state
-                                  (make-modal-state :type :add-column
-                                                    :on-input #'handle-column-input))))
-            "Add column"))))))
+           (<tasktable> (:columns columns
+                         :tasks tasks
+                         :on-add-task #'set-modal-state))
+           (<add-column-button> (:on-add-column #'set-modal-state)))))))
 
 (setup #'<app> "root")
 
