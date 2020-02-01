@@ -13,7 +13,7 @@
 (defclass repository () ())
 
 (defmethod i-repository:create ((repository repository) entity)
-  (push entity (gethash (type-of entity) *db* nil)))
+  (alexandria:nconcf (gethash (type-of entity) *db* nil) (list entity)))
 
 (defmethod i-repository:collect ((repository repository) entity-name &rest args)
   (declare (ignore args))
