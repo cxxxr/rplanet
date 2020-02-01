@@ -11,6 +11,10 @@
 (setf (symbol-function '<modal>) js:-modal)
 (js:-modal.set-app-element #j"#root")
 
+(defmacro fn (&body body)
+  `(lambda (&rest args)
+     ,@body))
+
 (defun alist-to-object (alist)
   (apply #'ffi::%object
          (mapcan (lambda (elt)
@@ -143,9 +147,14 @@
         (lambda (response)
           (funcall on-responsed response))))
 
-(defmacro fn (&body body)
-  `(lambda (&rest args)
-     ,@body))
+(defun handle-column-input (modal-state text on-responsed)
+  (then (request "/columns"
+                 :method :post
+                 :content `((:name . ,text)))
+        (lambda (response)
+          ((ffi:ref response :json)))
+        (lambda (response)
+          (funcall on-responsed response))))
 
 (define-react-component <app> ()
   (with-state ((tasks set-tasks #())
@@ -163,11 +172,12 @@
           (<task-adding-modal> (:enable modal-state
                                 :on-input (lambda (text)
                                             (set-modal-state nil)
-                                            (funcall (modal-state-on-input modal-state)
-                                                     modal-state
-                                                     text
-                                                     (fn (set-require-update-p t))))))
-          (:div (:style (ffi:object :display #j"flex" :flex-direction #j"column"))
+                                            (when (modal-state-on-input modal-state)
+                                              (funcall (modal-state-on-input modal-state)
+                                                       modal-state
+                                                       text
+                                                       (fn (set-require-update-p t)))))))
+          (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
            (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
             (map-with-index (lambda (column column-index)
                               (jsx (<column> (:column column
@@ -180,11 +190,11 @@
                                                                :value column-name
                                                                :on-input #'handle-task-input)))))))
                             columns))
-           #+(or)
            (:button (:on-click (lambda (e)
                                  (declare (ignore e))
                                  (set-modal-state
-                                  (make-modal-state :type :add-column))))
+                                  (make-modal-state :type :add-column
+                                                    :on-input #'handle-column-input))))
             "Add column"))))))
 
 (setup #'<app> "root")
