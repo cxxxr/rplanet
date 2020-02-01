@@ -8,7 +8,7 @@
   (:use :cl :valtan.react-utilities))
 (in-package :rplanet)
 
-(setf (symbol-function '<modal>) js:-modal)
+(setf (symbol-function '<react-modal>) js:-modal)
 (js:-modal.set-app-element #j"#root")
 
 (defmacro fn (&body body)
@@ -114,9 +114,9 @@
       (jsx (:form (:on-submit #'handle-submit)
             (:input (:on-change #'handle-change)))))))
 
-(define-react-component <task-adding-modal> (enable on-input)
-  (jsx (<modal> (:is-open (if enable #j:true #j:false))
-                (<task-input> (:on-input on-input)))))
+(define-react-component <modal> (enable on-input)
+  (jsx (<react-modal> (:is-open (if enable #j:true #j:false))
+                      (<task-input> (:on-input on-input)))))
 
 (defstruct modal-state
   type
@@ -191,14 +191,14 @@
        #j:undefined)
      (ffi:array require-update-p))
     (jsx (:div ()
-          (<task-adding-modal> (:enable modal-state
-                                :on-input (lambda (text)
-                                            (set-modal-state nil)
-                                            (when (modal-state-on-input modal-state)
-                                              (funcall (modal-state-on-input modal-state)
-                                                       modal-state
-                                                       text
-                                                       (fn (set-require-update-p t)))))))
+          (<modal> (:enable modal-state
+                    :on-input (lambda (text)
+                                (set-modal-state nil)
+                                (when (modal-state-on-input modal-state)
+                                  (funcall (modal-state-on-input modal-state)
+                                           modal-state
+                                           text
+                                           (fn (set-require-update-p t)))))))
           (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
            (<tasktable> (:columns columns
                          :tasks tasks
