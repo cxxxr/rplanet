@@ -112,6 +112,7 @@
            (funcall function elt (incf i)))
          sequence)))
 
+
 (defparameter +column-width+ 400)
 (defparameter +column-padding+ 10)
 
@@ -140,10 +141,11 @@
 
 (define-react-component <tasklist> (column tasks on-add-task)
   (jsx (:article (:style (ffi:object :background #j"#efefef"
-                                     :padding #j(format nil "~Apx 0px ~Apx ~Apx"
-                                                        +column-padding+
-                                                        +column-padding+
-                                                        +column-padding+)
+                                     :padding (ffi:cl->js
+                                               (format nil "~Apx 0px ~Apx ~Apx"
+                                                       +column-padding+
+                                                       +column-padding+
+                                                       +column-padding+))
                                      :margin #j"10px 10px 10px 0px"
                                      :width (+ +column-width+ +column-padding+)))
         (let* ((column-name (ffi:ref column :name))
