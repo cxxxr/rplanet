@@ -12,6 +12,7 @@
 
 (setf (symbol-function '<react-modal>) js:-modal)
 (setf (symbol-function '<react-dnd.use-drag>) js:react-dnd.use-drag)
+(setf (symbol-function '<react-dnd.use-drop>) js:react-dnd.use-drag)
 (setf (symbol-function '<dnd-provider>) js:react-dnd.-dnd-provider)
 (setf (symbol-function '<backend>) js:-backend.default)
 
