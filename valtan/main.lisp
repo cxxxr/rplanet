@@ -3,12 +3,18 @@
 (ffi:require js:react "react")
 (ffi:require js:react-dom "react-dom")
 (ffi:require js:-modal "react-modal")
+(ffi:require js:react-dnd "react-dnd")
+(ffi:require js:-backend "react-dnd-html5-backend")
 
 (defpackage :rplanet
   (:use :cl :valtan.react-utilities))
 (in-package :rplanet)
 
 (setf (symbol-function '<react-modal>) js:-modal)
+(setf (symbol-function '<react-dnd.use-drag>) js:react-dnd.use-drag)
+(setf (symbol-function '<dnd-provider>) js:react-dnd.-dnd-provider)
+(setf (symbol-function '<backend>) js:-backend.default)
+
 (js:-modal.set-app-element #j"#root")
 
 (defmacro fn (&body body)
@@ -71,6 +77,8 @@
 (defparameter +column-width+ 400)
 (defparameter +column-padding+ 10)
 
+(defparameter +task+ #j"task")
+
 (define-react-component <task> (item)
   (jsx (:article (:style (ffi:object :background #j"#efefef"
                                      :padding #j(format nil "~Apx ~Apx 0px 0px"
@@ -82,6 +90,17 @@
                        :background #j"white"))
          (:span ()
           (ffi:ref item :title))))))
+
+(define-react-component <draggable-task> (item)
+  (let* ((drag-js-array
+           (<react-dnd.use-drag>
+            (ffi:object :item (ffi:object :type +task+)
+                        :collect (lambda (monitor)
+                                   (ffi:object :is-dragging ((ffi:ref monitor :is-dragging)))))))
+         (is-dragging (ffi:ref (ffi:aget drag-js-array 0) :is-dragging))
+         (drag-ref (ffi:aget drag-js-array 1)))
+    (jsx (:div (:ref drag-ref)
+          (<task> (:item item))))))
 
 (define-react-component <tasklist> (column tasks on-add-task)
   (jsx (:article (:style (ffi:object :background #j"#efefef"
@@ -103,7 +122,7 @@
                                        (funcall on-add-task column-name)))
                   "+"))
                 (map-with-index (lambda (item i)
-                                  (jsx (<task> (:key i :item item))))
+                                  (jsx (<draggable-task> (:key i :item item))))
                                 tasks)))))))
 
 (define-react-component <task-input> (on-input)
@@ -180,7 +199,7 @@
           (let ((tasks (ffi:js->cl (ffi:ref response :children))))
             (funcall set-tasks tasks)))))
 
-(define-react-component <app> ()
+(define-react-component <kanban> ()
   (with-state ((tasks set-tasks #())
                (columns set-columns #())
                (modal-state set-modal-state nil)
@@ -205,6 +224,11 @@
                          :tasks tasks
                          :on-add-task #'set-modal-state))
            (<add-column-button> (:on-add-column #'set-modal-state)))))))
+
+(define-react-component <app> ()
+  (jsx
+   (<dnd-provider> (:backend #'<backend>)
+                   (<kanban> ()))))
 
 (setup #'<app> "root")
 
