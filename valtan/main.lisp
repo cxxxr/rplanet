@@ -21,6 +21,44 @@
   `(lambda (&rest args)
      ,@body))
 
+(eval-when (:compile-toplevel)
+  (defun gen-match-array (seq value op)
+    (let ((g-value (gensym)))
+      (acons g-value (list value)
+             (let ((acc nil)
+                   (index 0))
+               (map nil (lambda (pat)
+                          (let ((tmp (gensym)))
+                            (push `(,tmp (,op ,g-value ,index)) acc)
+                            (dolist (bind (gen-bind-match pat tmp))
+                              (push bind acc)))
+                          (incf index))
+                    seq)
+               (nreverse acc)))))
+  (defun gen-bind-match (pattern value)
+    (cond ((and (symbolp pattern)
+                (not (keywordp pattern)))
+           `((,pattern ,value)))
+          ((and (consp pattern)
+                (eq 'ffi:object (first pattern)))
+           (let ((var (second pattern)))
+             (assert (and (= 2 (length pattern))
+                          (symbolp var)
+                          (not (keywordp var))))
+             `((var (ffi:ref ,value ,(intern (string var) :keyword))))))
+          ((and (consp pattern)
+                (eq 'ffi:array (first pattern)))
+           (gen-match-array (rest pattern) value 'ffi:aget))
+          ((and (vectorp pattern)
+                (not (stringp pattern)))
+           (gen-match-array pattern value 'aref))
+          (t
+           (error "unexpected pattern: ~S" pattern)))))
+
+(defmacro bind (pattern value &body body)
+  `(let* ,(gen-bind-match pattern value)
+     ,@body))
+
 (defun alist-to-object (alist)
   (apply #'ffi::%object
          (mapcan (lambda (elt)
@@ -92,13 +130,11 @@
           (ffi:ref item :title))))))
 
 (define-react-component <draggable-task> (item)
-  (let* ((drag-js-array
-           (<react-dnd.use-drag>
-            (ffi:object :item (ffi:object :type +task+)
-                        :collect (lambda (monitor)
-                                   (ffi:object :is-dragging ((ffi:ref monitor :is-dragging)))))))
-         (is-dragging (ffi:ref (ffi:aget drag-js-array 0) :is-dragging))
-         (drag-ref (ffi:aget drag-js-array 1)))
+  (bind (ffi:array (ffi:object is-dragging) drag-ref)
+      (<react-dnd.use-drag>
+       (ffi:object :item (ffi:object :type +task+)
+                   :collect (lambda (monitor)
+                              (ffi:object :is-dragging ((ffi:ref monitor :is-dragging))))))
     (jsx (:div (:ref drag-ref)
           (<task> (:item item))))))
 
