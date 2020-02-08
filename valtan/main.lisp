@@ -11,8 +11,9 @@
 (in-package :rplanet)
 
 (setf (symbol-function '<react-modal>) js:-modal)
+(setf (symbol-function '<use-ref>) js:react.use-ref)
 (setf (symbol-function '<react-dnd.use-drag>) js:react-dnd.use-drag)
-(setf (symbol-function '<react-dnd.use-drop>) js:react-dnd.use-drag)
+(setf (symbol-function '<react-dnd.use-drop>) js:react-dnd.use-drop)
 (setf (symbol-function '<dnd-provider>) js:react-dnd.-dnd-provider)
 (setf (symbol-function '<backend>) js:-backend.default)
 
@@ -37,7 +38,9 @@
                     seq)
                (nreverse acc)))))
   (defun gen-bind-match (pattern value)
-    (cond ((and (symbolp pattern)
+    (cond ((null pattern)
+           nil)
+          ((and (symbolp pattern)
                 (not (keywordp pattern)))
            `((,pattern ,value)))
           ((and (consp pattern)
@@ -114,70 +117,6 @@
          sequence)))
 
 
-(defparameter +column-width+ 400)
-(defparameter +column-padding+ 10)
-
-(defparameter +task+ #j"task")
-
-(define-react-component <task> (item)
-  (jsx (:article (:style (ffi:object :background #j"#efefef"
-                                     :padding #j(format nil "~Apx ~Apx 0px 0px"
-                                                        +column-padding+
-                                                        +column-padding+)))
-        (:div (:style (ffi:object
-                       :width +column-width+
-                       :height 200
-                       :background #j"white"))
-         (:span ()
-          (ffi:ref item :title))))))
-
-(define-react-component <draggable-task> (item)
-  (bind (ffi:array (ffi:object is-dragging) drag-ref)
-      (<react-dnd.use-drag>
-       (ffi:object :item (ffi:object :type +task+)
-                   :collect (lambda (monitor)
-                              (ffi:object :is-dragging ((ffi:ref monitor :is-dragging))))))
-    (jsx (:div (:ref drag-ref)
-          (<task> (:item item))))))
-
-(define-react-component <tasklist> (column tasks on-add-task)
-  (jsx (:article (:style (ffi:object :background #j"#efefef"
-                                     :padding (ffi:cl->js
-                                               (format nil "~Apx 0px ~Apx ~Apx"
-                                                       +column-padding+
-                                                       +column-padding+
-                                                       +column-padding+))
-                                     :margin #j"10px 10px 10px 0px"
-                                     :width (+ +column-width+ +column-padding+)))
-        (let* ((column-name (ffi:ref column :name))
-               (tasks (remove column-name tasks
-                              :test-not #'equal
-                              :key (lambda (task) (ffi:ref task :column_name)))))
-          (jsx (:div ()
-                (:div ()
-                 (:h1 () column-name)
-                 (:button (:on-click (lambda (e)
-                                       (declare (ignore e))
-                                       (funcall on-add-task column-name)))
-                  "+"))
-                (map-with-index (lambda (item i)
-                                  (jsx (<draggable-task> (:key i :item item))))
-                                tasks)))))))
-
-(define-react-component <task-input> (on-input)
-  (with-state ((value set-value #j""))
-    (flet ((handle-submit (e)
-             ((ffi:ref e :prevent-default))
-             (funcall on-input (ffi:js->cl value)))
-           (handle-change (e)
-             (set-value (ffi:ref e :target :value))))
-      (jsx (:form (:on-submit #'handle-submit)
-            (:input (:on-change #'handle-change)))))))
-
-(define-react-component <modal> (enable on-input)
-  (jsx (<react-modal> (:is-open (if enable #j:true #j:false))
-                      (<task-input> (:on-input on-input)))))
-
 (defstruct modal-state
   type
   value
@@ -202,6 +141,129 @@
         (lambda (response)
           (funcall on-responsed response))))
 
+(defun fetch-data (set-tasks set-columns)
+  (then (request "/columns" :method :get)
+        (lambda (response)
+          ((ffi:ref response :json)))
+        (lambda (response)
+          (let ((columns (ffi:js->cl (ffi:ref response :children))))
+            (funcall set-columns columns))))
+  (then (request "/tasks" :method :get)
+        (lambda (response)
+          ((ffi:ref response :json)))
+        (lambda (response)
+          (let ((tasks (ffi:js->cl (ffi:ref response :children))))
+            (funcall set-tasks tasks)))))
+
+(defun update-task (column-name from to)
+  (then (request "/tasks/move"
+                 :method :post
+                 :content `((:column-name . ,column-name)
+                            (:from . ,from)
+                            (:to . ,to)))
+        (lambda (response)
+          ((ffi:ref response :json)))
+        (lambda (response)
+          (js:console.log response))))
+
+
+(defparameter +column-width+ 400)
+(defparameter +column-padding+ 10)
+
+(defparameter +task+ #j"task")
+
+(define-react-component <task> (item)
+  (jsx (:article (:style (ffi:object :background #j"#efefef"
+                                     :padding #j(format nil "~Apx ~Apx 0px 0px"
+                                                        +column-padding+
+                                                        +column-padding+)))
+        (:div (:style (ffi:object
+                       :width +column-width+
+                       :height 200
+                       :background #j"white"))
+         (:span ()
+          (ffi:ref item :title))))))
+
+(define-react-component <draggable-task> (item on-move-task index)
+  (let ((ref (<use-ref>))
+        (current-index-ref (<use-ref> nil)))
+    (bind (ffi:array nil drop)
+        (<react-dnd.use-drop> (ffi:object :accept +task+
+                                          :hover (lambda (dragging-item monitor)
+                                                   (let* ((drag-index (ffi:ref dragging-item :index))
+                                                          (hover-index index)
+                                                          (hover-bounding-rect ((ffi:ref ref :current :get-bounding-client-rect)))
+                                                          (hover-middle-y (floor (- (ffi:ref hover-bounding-rect :bottom)
+                                                                                    (ffi:ref hover-bounding-rect :top))
+                                                                                 2))
+                                                          (client-offset ((ffi:ref monitor :get-client-offset)))
+                                                          (hover-client-y (- (ffi:ref client-offset :y)
+                                                                             (ffi:ref hover-bounding-rect :top))))
+                                                     (unless (or (and (< drag-index hover-index)
+                                                                      (< hover-client-y hover-middle-y))
+                                                                 (and (> drag-index hover-index)
+                                                                      (> hover-client-y hover-middle-y)))
+                                                       (ffi:set (ffi:ref current-index-ref :current)
+                                                                (cons drag-index hover-index))
+                                                       (js:console.log drag-index hover-index))))
+                                          :drop (fn
+                                                 (let ((move (ffi:ref current-index-ref :current)))
+                                                   (when move
+                                                     (destructuring-bind (from . to) move
+                                                       (funcall on-move-task from to)))))))
+      (bind (ffi:array (ffi:object is-dragging) drag)
+          (<react-dnd.use-drag>
+           (ffi:object :item (ffi:object :type +task+ :index index)
+                       :collect (lambda (monitor)
+                                  (ffi:object :is-dragging ((ffi:ref monitor :is-dragging))))))
+        (funcall drag (funcall drop ref))
+        (jsx (:div (:ref ref)
+              (<task> (:item item))))))))
+
+(define-react-component <tasklist> (column tasks on-add-task)
+  (jsx (:article (:style (ffi:object :background #j"#efefef"
+                                     :padding (ffi:cl->js
+                                               (format nil "~Apx 0px ~Apx ~Apx"
+                                                       +column-padding+
+                                                       +column-padding+
+                                                       +column-padding+))
+                                     :margin #j"10px 10px 10px 0px"
+                                     :width (+ +column-width+ +column-padding+)))
+        (let* ((column-name (ffi:ref column :name))
+               (tasks (remove column-name tasks
+                              :test-not #'equal
+                              :key (lambda (task) (ffi:ref task :column_name)))))
+          (jsx (:div ()
+                (:div ()
+                 (:h1 () column-name)
+                 (:button (:on-click (lambda (e)
+                                       (declare (ignore e))
+                                       (funcall on-add-task column-name)))
+                  "+"))
+                (map-with-index
+                 (lambda (item i)
+                   (jsx (<draggable-task> (:key i
+                                           :item item
+                                           :index i
+                                           :on-move-task (lambda (from to)
+                                                           (js:console.log #j"move" column from to)
+                                                           )))))
+                 tasks)))))))
+
+(define-react-component <task-input> (on-input)
+  (with-state ((value set-value #j""))
+    (flet ((handle-submit (e)
+             ((ffi:ref e :prevent-default))
+             (funcall on-input (ffi:js->cl value)))
+           (handle-change (e)
+             (set-value (ffi:ref e :target :value))))
+      (jsx (:form (:on-submit #'handle-submit)
+            (:input (:on-change #'handle-change)))))))
+
+(define-react-component <modal> (enable on-input)
+  (jsx (<react-modal> (:is-open (if enable #j:true #j:false))
+                      (<task-input> (:on-input on-input)))))
+
 (define-react-component <tasktable> (columns tasks on-add-task)
   (jsx (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
         (map-with-index (lambda (column column-index)
@@ -223,20 +285,6 @@
                                       (make-modal-state :type :add-column
                                                         :on-input #'handle-column-input))))
         "Add column")))
-
-(defun fetch-data (set-tasks set-columns)
-  (then (request "/columns" :method :get)
-        (lambda (response)
-          ((ffi:ref response :json)))
-        (lambda (response)
-          (let ((columns (ffi:js->cl (ffi:ref response :children))))
-            (funcall set-columns columns))))
-  (then (request "/tasks" :method :get)
-        (lambda (response)
-          ((ffi:ref response :json)))
-        (lambda (response)
-          (let ((tasks (ffi:js->cl (ffi:ref response :children))))
-            (funcall set-tasks tasks)))))
 
 (define-react-component <kanban> ()
   (with-state ((tasks set-tasks #())
@@ -269,8 +317,8 @@
    (<dnd-provider> (:backend #'<backend>)
                    (<kanban> ()))))
 
-(setup #'<app> "root")
+(setup #'<app> #j"root")
 
 (valtan.remote-eval:connect
  (lambda ()
-   (setup #'<app> "root")))
+   (setup #'<app> #j"root")))
