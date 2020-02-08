@@ -12,7 +12,8 @@
            :add-column
            :get-columns
            :add-task
-           :get-tasks))
+           :get-tasks
+           :move-task))
 (in-package :rplanet/usecases)
 
 (define-condition rplanet-error (simple-error)
@@ -56,8 +57,8 @@
                              :text text)))
     (i-repository:create-task i-repository:*interface* task)))
 
-(defun get-tasks ()
-  (i-repository:collect-task i-repository:*interface*))
+(defun get-tasks (&key column-name)
+  (i-repository:collect-task i-repository:*interface* :column-name column-name))
 
 (defun move (list from to)
   (let ((append-fn
@@ -67,7 +68,7 @@
                 (list* to from rest))
               (lambda (from to rest)
                 (list* from to rest)))))
-    (setq list (delete from list))
+    (setq list (remove from list))
     (do ((cons list (cdr cons))
          (prev nil cons))
         ((null cons))

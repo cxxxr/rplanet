@@ -27,17 +27,19 @@
              :key (alexandria:compose #'column-name #'car))))
 
 (defmethod i-repository:create-task ((repository repository) task)
-  (push task
-        (cdr (find (task-column-name task)
-                   *db*
-                   :key (alexandria:compose #'column-name #'car)))))
+  (let ((column
+          (find (task-column-name task)
+                *db*
+                :test #'string=
+                :key (alexandria:compose #'column-name #'car))))
+    (push task (cdr column))))
 
 (defmethod i-repository:collect-task ((repository repository) &key column-name)
   (if column-name
-      (mapcar #'cdr
-              (find column-name
-                    *db*
-                    :key (alexandria:compose #'column-name #'car)))
+      (cdr (find column-name
+                 *db*
+                 :test #'string=
+                 :key (alexandria:compose #'column-name #'car)))
       (loop :for (column . tasks) :in *db*
             :append tasks)))
 
@@ -48,5 +50,9 @@
            (i-repository:collect-task repository :column-name column-name)))
 
 (defmethod i-repository:update-tasks ((repository repository) tasks &key column-name)
-  (setf (gethash column-name *db*) tasks))
+  (setf (cdr (find column-name
+                   *db*
+                   :test #'string=
+                   :key (alexandria:compose #'column-name #'car)))
+        tasks))
 

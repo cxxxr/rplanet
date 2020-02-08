@@ -64,3 +64,21 @@
     (ok (= 3 (length (rplanet/usecases:get-tasks))))
     (ok (equal (mapcar #'rplanet/entities:task-title (rplanet/usecases:get-tasks))
                '("baz" "bar" "foo")))))
+
+(deftest move-task
+  (with
+    (rplanet/usecases:add-column "TODO")
+    (let* ((task1 (rplanet/usecases:add-task :column-name "TODO" :title "1"))
+           (task2 (rplanet/usecases:add-task :column-name "TODO" :title "2"))
+           (task3 (rplanet/usecases:add-task :column-name "TODO" :title "3"))
+           (task4 (rplanet/usecases:add-task :column-name "TODO" :title "4")))
+      (ok (equal (rplanet/usecases:get-tasks :column-name "TODO")
+                 (list task4 task3 task2 task1)))
+      (rplanet/usecases:move-task :from (rplanet/entities:task-id task1)
+                                  :to (rplanet/entities:task-id task4))
+      (ok (equal (rplanet/usecases:get-tasks :column-name "TODO")
+                 (list task1 task4 task3 task2)))
+      (rplanet/usecases:move-task :from (rplanet/entities:task-id task4)
+                                  :to (rplanet/entities:task-id task2))
+      (ok (equal (rplanet/usecases:get-tasks :column-name "TODO")
+                 (list task1 task3 task2 task4))))))
