@@ -16,12 +16,10 @@
     :initarg :name
     :reader column-name)))
 
-(defvar *task-id* 0)
-
 (defclass task ()
   ((id
-    :reader task-id
-    :initform (incf *task-id*))
+    :initform (gensym "TASK")
+    :accessor task-id)
    (title
     :initarg :title
     :accessor task-title)

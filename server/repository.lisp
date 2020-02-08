@@ -6,36 +6,43 @@
 (in-package :rplanet/repository)
 
 (defun make-db ()
-  (make-hash-table))
+  '())
 
 (defvar *db* (make-db))
-
-(defclass repository () ())
 
 (defmacro push-end (object place)
   `(alexandria:nconcf ,place (list ,object)))
 
+(defclass repository () ())
+
 (defmethod i-repository:create-column ((repository repository) column)
-  (push-end column (gethash 'column *db* nil)))
+  (push-end (cons column nil) *db*))
 
 (defmethod i-repository:collect-column ((repository repository))
-  (values (gethash 'column *db* nil)))
+  (mapcar #'car *db*))
 
 (defmethod i-repository:find-column ((repository repository) name)
-  (find name (gethash 'column *db*)
-        :test #'string=
-        :key #'column-name))
+  (car (find name *db*
+             :test #'string=
+             :key (alexandria:compose #'column-name #'car))))
 
 (defmethod i-repository:create-task ((repository repository) task)
-  (push task (gethash 'task *db* nil)))
+  (push task
+        (cdr (find (task-column-name task)
+                   *db*
+                   :key (alexandria:compose #'column-name #'car)))))
 
-(defmethod i-repository:collect-task ((repository repository))
-  (values (gethash 'task *db* nil)))
+(defmethod i-repository:collect-task ((repository repository) &key column-name)
+  (if column-name
+      (mapcar #'cdr
+              (find column-name
+                    *db*
+                    :key (alexandria:compose #'column-name #'car)))
+      (loop :for (column . tasks) :in *db*
+            :append tasks)))
 
-(defmethod i-repository:find-task ((repository repository) &key (column-name nil column-name-p) (id nil id-p))
+(defmethod i-repository:find-task ((repository repository) &key column-name id)
   (find-if (lambda (task)
-             (and (or (not column-name-p)
-                      (equal (task-column-name task) column-name))
-                  (or (not id-p)
-                      (equal (task-id task) id))))
-           (gethash 'task *db*)))
+             (or (null id)
+                 (equal (task-id task) id)))
+           (i-repository:collect-task repository :column-name column-name)))

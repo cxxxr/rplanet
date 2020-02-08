@@ -26,6 +26,7 @@
 (setf (ningle:route *app* "/columns" :method :GET) 'rplanet/controllers:get-columns)
 (setf (ningle:route *app* "/tasks" :method :POST) 'rplanet/controllers:post-task)
 (setf (ningle:route *app* "/tasks" :method :GET) 'rplanet/controllers:get-tasks)
+(setf (ningle:route *app* "/tasks/move" :method :POST) 'rplanet/controllers:move-task)
 
 (defun start ()
   (unless *handler*

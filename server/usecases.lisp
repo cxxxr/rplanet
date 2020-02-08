@@ -58,3 +58,36 @@
 
 (defun get-tasks ()
   (i-repository:collect-task i-repository:*interface*))
+
+(defun move (list from to)
+  (let ((append-fn
+          (if (< (position from list)
+                 (position to list))
+              (lambda (from to rest)
+                (list* to from rest))
+              (lambda (from to rest)
+                (list* from to rest)))))
+    (setq list (delete from list))
+    (do ((cons list (cdr cons))
+         (prev nil cons))
+        ((null cons))
+      (when (eq (car cons) to)
+        (return
+          (if prev
+              (progn
+                (setf (cdr prev) (funcall append-fn from to (cdr cons)))
+                list)
+              (funcall append-fn from to (cdr cons))))))))
+
+(defun move-task (&key (from (missing 'from))
+                       (to (missing 'to)))
+  (let ((from (i-repository:find-task i-repository:*interface* :id from))
+        (to (i-repository:find-task i-repository:*interface* :id to)))
+    (if (equal (task-column-name from)
+               (task-column-name to))
+        (let* ((column-name (task-column-name from))
+               (tasks (i-repository:collect-task i-repository:*interface*
+                                                 :column-name column-name))
+               (sorted-tasks (move tasks from to)))
+          (i-repository:update-tasks sorted-tasks :column-name column-name))
+        (error "expected case"))))

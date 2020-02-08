@@ -1,12 +1,15 @@
 (defpackage :rplanet/repository-interface
   (:use :cl)
+  (:import-from :rplanet/utils
+                :missing)
   (:export :*interface*
            :create-column
            :collect-column
            :find-column
            :create-task
            :collect-task
-           :find-task))
+           :find-task
+           :update-tasks))
 (in-package :rplanet/repository-interface)
 
 (defvar *interface*)
@@ -20,9 +23,15 @@
   column)
 
 (defgeneric create-task (repository task))
-(defgeneric collect-task (repository))
+(defgeneric collect-task (repository &key column-name))
 (defgeneric find-task (repository &key column-name id))
+(defgeneric update-tasks (repository &key column-name))
 
 (defmethod create-task :around (repository task)
   (call-next-method)
   task)
+
+(defmethod update-tasks (repository &key (column-name nil column-name-p))
+  (declare (ignore column-name))
+  (unless column-name-p
+    (missing 'column-name)))

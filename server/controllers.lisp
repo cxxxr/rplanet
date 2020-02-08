@@ -3,7 +3,8 @@
   (:export :post-column
            :get-columns
            :post-task
-           :get-tasks))
+           :get-tasks
+           :move-task))
 (in-package :rplanet/controllers)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -66,3 +67,10 @@
                 (mapcar (lambda (task)
                           (task-to-json task))
                         (rplanet/usecases:get-tasks)))))
+
+(defun move-task (params)
+  (declare (ignore params))
+  #+(or)
+  (with-params (column-name from to)
+      params
+    ))
