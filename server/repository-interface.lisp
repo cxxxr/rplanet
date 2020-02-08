@@ -1,18 +1,28 @@
 (defpackage :rplanet/repository-interface
   (:use :cl)
-  (:shadow :find)
   (:export :*interface*
-           :create
-           :collect
-           :find))
+           :create-column
+           :collect-column
+           :find-column
+           :create-task
+           :collect-task
+           :find-task))
 (in-package :rplanet/repository-interface)
 
 (defvar *interface*)
 
-(defgeneric create (repository entity))
-(defgeneric collect (repository entity-name &rest args))
-(defgeneric find (repository entity-name &rest args))
+(defgeneric create-column (repository column))
+(defgeneric collect-column (repository))
+(defgeneric find-column (repository name))
 
-(defmethod create :around (repository entity)
+(defmethod create-column :around (repository column)
   (call-next-method)
-  entity)
+  column)
+
+(defgeneric create-task (repository task))
+(defgeneric collect-task (repository))
+(defgeneric find-task (repository &key column-name id))
+
+(defmethod create-task :around (repository task)
+  (call-next-method)
+  task)

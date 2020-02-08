@@ -29,19 +29,25 @@
         `(:content-type "application/json")
         (list (st-json:write-json-to-string jso))))
 
+(defun column-to-json (column)
+  (st-json:jso "name" (rplanet/entities:column-name column)))
+
 (defun post-column (params)
   (with-params (name) params
     (let ((column (rplanet/usecases:add-column name)))
-      (render-json (st-json:jso "name" (rplanet/entities:column-name column))))))
+      (render-json (column-to-json column)))))
 
 (defun get-columns (params)
   (declare (ignore params))
   (let ((columns (rplanet/usecases:get-columns)))
     (render-json
-     (st-json:jso "children" (mapcar (lambda (column)
-                                       (st-json:jso "name"
-                                                    (rplanet/entities:column-name column)))
-                                     columns)))))
+     (st-json:jso "children" (mapcar #'column-to-json columns)))))
+
+(defun task-to-json (task)
+  (st-json:jso "id" (rplanet/entities:task-id task)
+               "title" (rplanet/entities:task-title task)
+               "text" (rplanet/entities:task-text task)
+               "column_name" (rplanet/entities:task-column-name task)))
 
 (defun post-task (params)
   (with-params (column-name
@@ -51,16 +57,12 @@
     (let ((task (rplanet/usecases:add-task :column-name column-name
                                            :title title
                                            :text text)))
-      (render-json (st-json:jso "column_name" (rplanet/entities:task-column-name task)
-                                "title" (rplanet/entities:task-title task)
-                                "text" (rplanet/entities:task-text task))))))
+      (render-json (task-to-json task)))))
 
 (defun get-tasks (params)
   (declare (ignore params))
   (render-json
    (st-json:jso "children"
                 (mapcar (lambda (task)
-                          (st-json:jso "title" (rplanet/entities:task-title task)
-                                       "text" (rplanet/entities:task-text task)
-                                       "column_name" (rplanet/entities:task-column-name task)))
+                          (task-to-json task))
                         (rplanet/usecases:get-tasks)))))

@@ -2,6 +2,8 @@
   (:use :cl
         :rplanet/entities)
   (:local-nicknames (:i-repository :rplanet/repository-interface))
+  (:import-from :rplanet/utils
+                :missing)
   (:export :rplanet-error
            :already-column-error
            :already-column-error-name
@@ -35,28 +37,24 @@
                      (missing-column-name condition)))))
 
 (defun add-column (name)
-  (when (i-repository:find i-repository:*interface* 'column :name name)
+  (when (i-repository:find-column i-repository:*interface* name)
     (error 'already-column-error :name name))
-  (i-repository:create i-repository:*interface* (make-instance 'column :name name)))
+  (i-repository:create-column i-repository:*interface*
+                              (make-instance 'column :name name)))
 
 (defun get-columns ()
-  (i-repository:collect i-repository:*interface* 'column))
+  (i-repository:collect-column i-repository:*interface*))
 
-(defun add-task (&key (column-name (error "missing :column-name"))
-                      (title (error "missing :title"))
+(defun add-task (&key (column-name (missing 'column-name))
+                      (title (missing 'title))
                       (text ""))
-  (unless (i-repository:find i-repository:*interface* 'column :name column-name)
+  (unless (i-repository:find-column i-repository:*interface* column-name)
     (error 'missing-column :name column-name))
-  (let ((n (length (i-repository:collect i-repository:*interface* 'task)))) ; TODO: i-repository:count
-    (let ((task (make-instance 'task
-                               :column-name column-name
-                               :title title
-                               :text text
-                               :priority (1+ n))))
-      (i-repository:create i-repository:*interface*
-                           task))))
+  (let ((task (make-instance 'task
+                             :column-name column-name
+                             :title title
+                             :text text)))
+    (i-repository:create-task i-repository:*interface* task)))
 
 (defun get-tasks ()
-  (sort (copy-list (i-repository:collect i-repository:*interface* 'task))
-        #'>
-        :key #'task-priority))
+  (i-repository:collect-task i-repository:*interface*))

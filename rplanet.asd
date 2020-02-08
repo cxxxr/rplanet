@@ -2,7 +2,8 @@
   :depends-on ("ningle" "clack" "st-json" "assoc-utils")
   :serial t
   :pathname "server"
-  :components ((:file "entities")
+  :components ((:file "utils")
+               (:file "entities")
                (:file "repository-interface")
                (:file "usecases")
                (:file "repository")
