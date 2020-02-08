@@ -1,5 +1,5 @@
 (defpackage :rplanet/repository
-  (:use :cl :rplanet/entities)
+  (:use :cl :rplanet/entities :rplanet/utils)
   (:local-nicknames (:i-repository :rplanet/repository-interface))
   (:export :make-db
            :repository))
@@ -9,9 +9,6 @@
   '())
 
 (defvar *db* (make-db))
-
-(defmacro push-end (object place)
-  `(alexandria:nconcf ,place (list ,object)))
 
 (defclass repository () ())
 
@@ -55,4 +52,3 @@
                    :test #'string=
                    :key (alexandria:compose #'column-name #'car)))
         tasks))
-
