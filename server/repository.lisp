@@ -46,3 +46,7 @@
              (or (null id)
                  (equal (task-id task) id)))
            (i-repository:collect-task repository :column-name column-name)))
+
+(defmethod i-repository:update-tasks ((repository repository) tasks &key column-name)
+  (setf (gethash column-name *db*) tasks))
+
