@@ -10,6 +10,12 @@
 
 (defvar *db* (make-db))
 
+(defun find-column (column-name)
+  (flet ((key (x) (column-name (car x))))
+    (find column-name *db*
+          :test #'string=
+          :key #'key)))
+
 (defclass repository () ())
 
 (defmethod i-repository:create-column ((repository repository) column)
@@ -19,24 +25,15 @@
   (mapcar #'car *db*))
 
 (defmethod i-repository:find-column ((repository repository) name)
-  (car (find name *db*
-             :test #'string=
-             :key (alexandria:compose #'column-name #'car))))
+  (car (find-column name)))
 
 (defmethod i-repository:create-task ((repository repository) task)
-  (let ((column
-          (find (task-column-name task)
-                *db*
-                :test #'string=
-                :key (alexandria:compose #'column-name #'car))))
+  (let ((column (find-column (task-column-name task))))
     (push task (cdr column))))
 
 (defmethod i-repository:collect-task ((repository repository) &key column-name)
   (if column-name
-      (cdr (find column-name
-                 *db*
-                 :test #'string=
-                 :key (alexandria:compose #'column-name #'car)))
+      (cdr (find-column column-name))
       (loop :for (column . tasks) :in *db*
             :append tasks)))
 
@@ -47,8 +44,5 @@
            (i-repository:collect-task repository :column-name column-name)))
 
 (defmethod i-repository:update-tasks ((repository repository) tasks &key column-name)
-  (setf (cdr (find column-name
-                   *db*
-                   :test #'string=
-                   :key (alexandria:compose #'column-name #'car)))
+  (setf (cdr (find-column column-name))
         tasks))
