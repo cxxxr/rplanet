@@ -1,5 +1,7 @@
 ;; -*- mode:lisp -*-
 
-(:members ("main")
- :depends-on ("react-utilities"
-              "remote-eval"))
+(defsystem "rplanet"
+  :depends-on ("react-utilities"
+               "remote-eval")
+  :serial t
+  :components ((:file "main")))
