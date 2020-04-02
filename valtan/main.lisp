@@ -319,6 +319,7 @@
 
 (setup #'<app> #j"root")
 
+#+(or)
 (valtan.remote-eval:connect
  (lambda ()
    (setup #'<app> #j"root")))
