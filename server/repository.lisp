@@ -29,7 +29,8 @@
 
 (defmethod i-repository:create-task ((repository repository) task)
   (let ((column (find-column (task-column-name task))))
-    (push task (cdr column))))
+    (push task (cdr column))
+    task))
 
 (defmethod i-repository:collect-task ((repository repository) &key column-name)
   (if column-name
