@@ -155,16 +155,16 @@
           (let ((tasks (ffi:js->cl (ffi:ref response :children))))
             (funcall set-tasks tasks)))))
 
-(defun update-task (column-name from to)
+(defun update-task (from to set-tasks)
   (then (request "/tasks/move"
                  :method :post
-                 :content `((:column-name . ,column-name)
-                            (:from . ,from)
+                 :content `((:from . ,from)
                             (:to . ,to)))
         (lambda (response)
           ((ffi:ref response :json)))
         (lambda (response)
-          (js:console.log response))))
+          (let ((tasks (ffi:js->cl (ffi:ref response :children))))
+            (funcall set-tasks tasks)))))
 
 
 (defparameter +column-width+ 400)
@@ -221,7 +221,7 @@
         (jsx (:div (:ref ref)
               (<task> (:item item))))))))
 
-(define-react-component <tasklist> (column tasks on-add-task)
+(define-react-component <tasklist> (column tasks on-add-task set-tasks)
   (jsx (:article (:style (ffi:object :background #j"#efefef"
                                      :padding (ffi:cl->js
                                                (format nil "~Apx 0px ~Apx ~Apx"
@@ -242,13 +242,13 @@
                                        (funcall on-add-task column-name)))
                   "+"))
                 (map-with-index
-                 (lambda (item i)
+                 (lambda (task i)
                    (jsx (<draggable-task> (:key i
-                                           :item item
-                                           :index i
+                                           :item task
+                                           :index (ffi:ref task :id)
                                            :on-move-task (lambda (from to)
                                                            (js:console.log #j"move" column from to)
-                                                           )))))
+                                                           (update-task from to set-tasks))))))
                  tasks)))))))
 
 (define-react-component <task-input> (on-input)
@@ -265,7 +265,7 @@
   (jsx (<react-modal> (:is-open (if enable #j:true #j:false))
                       (<task-input> (:on-input on-input)))))
 
-(define-react-component <tasktable> (columns tasks on-add-task)
+(define-react-component <tasktable> (columns tasks on-add-task set-tasks)
   (jsx (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
         (map-with-index (lambda (column column-index)
                           (jsx (<tasklist> (:column column
@@ -276,7 +276,8 @@
                                                                     (make-modal-state
                                                                      :type :add-task
                                                                      :value column-name
-                                                                     :on-input #'handle-task-input)))))))
+                                                                     :on-input #'handle-task-input)))
+                                            :set-tasks set-tasks))))
                         columns))))
 
 (define-react-component <add-column-button> (on-add-column)
@@ -310,7 +311,8 @@
           (:div (:style (ffi:object :display #j"flex" :flex-direction #j"row"))
            (<tasktable> (:columns columns
                          :tasks tasks
-                         :on-add-task #'set-modal-state))
+                         :on-add-task #'set-modal-state
+                         :set-tasks #'set-tasks))
            (<add-column-button> (:on-add-column #'set-modal-state)))))))
 
 (define-react-component <app> ()
@@ -320,7 +322,6 @@
 
 (setup #'<app> #j"root")
 
-#+(or)
 (valtan.remote-eval:connect
  (lambda ()
    (setup #'<app> #j"root")))
