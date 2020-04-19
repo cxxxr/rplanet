@@ -13,5 +13,15 @@ module.exports = {
       'node_modules',
       fs.readFileSync('.valtan-path', 'utf-8')
     ]
+  },
+  devtool: 'inline-source-map',
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        use: ["source-map-loader"],
+        enforce: "pre"
+      }
+    ]
   }
 };
