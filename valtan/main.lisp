@@ -188,29 +188,30 @@
   (let ((ref (<use-ref>))
         (current-index-ref (<use-ref> nil)))
     (bind (ffi:array nil drop)
-        (<react-dnd.use-drop> (ffi:object :accept +task+
-                                          :hover (lambda (dragging-item monitor)
-                                                   (let* ((drag-index (ffi:ref dragging-item :index))
-                                                          (hover-index index)
-                                                          (hover-bounding-rect ((ffi:ref ref :current :get-bounding-client-rect)))
-                                                          (hover-middle-y (floor (- (ffi:ref hover-bounding-rect :bottom)
-                                                                                    (ffi:ref hover-bounding-rect :top))
-                                                                                 2))
-                                                          (client-offset ((ffi:ref monitor :get-client-offset)))
-                                                          (hover-client-y (- (ffi:ref client-offset :y)
-                                                                             (ffi:ref hover-bounding-rect :top))))
-                                                     (unless (or (and (< drag-index hover-index)
-                                                                      (< hover-client-y hover-middle-y))
-                                                                 (and (> drag-index hover-index)
-                                                                      (> hover-client-y hover-middle-y)))
-                                                       (ffi:set (ffi:ref current-index-ref :current)
-                                                                (cons drag-index hover-index))
-                                                       (js:console.log drag-index hover-index))))
-                                          :drop (fn
-                                                 (let ((move (ffi:ref current-index-ref :current)))
-                                                   (when move
-                                                     (destructuring-bind (from . to) move
-                                                       (funcall on-move-task from to)))))))
+        (<react-dnd.use-drop>
+         (ffi:object :accept +task+
+                     :hover (lambda (dragging-item monitor)
+                              (let* ((drag-index (ffi:ref dragging-item :index))
+                                     (hover-index index)
+                                     (hover-bounding-rect ((ffi:ref ref :current :get-bounding-client-rect)))
+                                     (hover-middle-y (floor (- (ffi:ref hover-bounding-rect :bottom)
+                                                               (ffi:ref hover-bounding-rect :top))
+                                                            2))
+                                     (client-offset ((ffi:ref monitor :get-client-offset)))
+                                     (hover-client-y (- (ffi:ref client-offset :y)
+                                                        (ffi:ref hover-bounding-rect :top))))
+                                (unless (or (and (< drag-index hover-index)
+                                                 (< hover-client-y hover-middle-y))
+                                            (and (> drag-index hover-index)
+                                                 (> hover-client-y hover-middle-y)))
+                                  (ffi:set (ffi:ref current-index-ref :current)
+                                           (cons drag-index hover-index))
+                                  (js:console.log drag-index hover-index))))
+                     :drop (fn
+                            (let ((move (ffi:ref current-index-ref :current)))
+                              (when move
+                                (destructuring-bind (from . to) move
+                                  (funcall on-move-task from to)))))))
       (bind (ffi:array (ffi:object is-dragging) drag)
           (<react-dnd.use-drag>
            (ffi:object :item (ffi:object :type +task+ :index index)
