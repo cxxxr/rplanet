@@ -92,5 +92,6 @@
                (sorted-tasks (move tasks from to)))
           (i-repository:update-tasks i-repository:*interface*
                                      sorted-tasks
-                                     :column-name column-name))
+                                     :column-name column-name)
+          (get-tasks :column-name (task-column-name from)))
         (error "expected case"))))

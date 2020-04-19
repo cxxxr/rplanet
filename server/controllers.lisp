@@ -64,13 +64,13 @@
   (declare (ignore params))
   (render-json
    (st-json:jso "children"
-                (mapcar (lambda (task)
-                          (task-to-json task))
+                (mapcar #'task-to-json
                         (rplanet/usecases:get-tasks)))))
 
 (defun move-task (params)
-  (declare (ignore params))
-  #+(or)
-  (with-params (column-name from to)
+  (with-params (from to)
       params
-    ))
+    (render-json
+     (st-json:jso "children"
+                  (mapcar #'task-to-json
+                          (rplanet/usecases:move-task :from from :to to))))))
