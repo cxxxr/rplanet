@@ -3,7 +3,7 @@ const fs = require('fs');
 
 module.exports = {
   mode: 'none',
-  entry: './rplanet.js',
+  entry: './.valtan-cache/rplanet.js',
   output: {
     filename: 'main.js',
     path: path.resolve(__dirname, '../public/assets/dist')
