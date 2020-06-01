@@ -61,24 +61,26 @@
   (i-repository:collect-task i-repository:*interface* :column-name column-name))
 
 (defun move (list from to)
-  (let ((append-fn
-          (if (< (position from list)
-                 (position to list))
-              (lambda (from to rest)
-                (list* to from rest))
-              (lambda (from to rest)
-                (list* from to rest)))))
-    (setq list (remove from list))
-    (do ((cons list (cdr cons))
-         (prev nil cons))
-        ((null cons))
-      (when (eq (car cons) to)
-        (return
-          (if prev
-              (progn
-                (setf (cdr prev) (funcall append-fn from to (cdr cons)))
-                list)
-              (funcall append-fn from to (cdr cons))))))))
+  (if (eq from to)
+      list
+      (let ((append-fn
+              (if (< (position from list)
+                     (position to list))
+                  (lambda (from to rest)
+                    (list* to from rest))
+                  (lambda (from to rest)
+                    (list* from to rest)))))
+        (setq list (remove from list))
+        (do ((cons list (cdr cons))
+             (prev nil cons))
+            ((null cons))
+          (when (eq (car cons) to)
+            (return
+              (if prev
+                  (progn
+                    (setf (cdr prev) (funcall append-fn from to (cdr cons)))
+                    list)
+                  (funcall append-fn from to (cdr cons)))))))))
 
 (defun move-task (&key (from (missing 'from))
                        (to (missing 'to)))
