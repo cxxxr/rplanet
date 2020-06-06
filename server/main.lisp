@@ -21,7 +21,8 @@
 (defvar *app* (make-instance 'app))
 (defvar *handler* nil)
 
-(setf (ningle:route *app* "/" :method :GET) (asdf:system-relative-pathname :rplanet #p"public/assets/index.html"))
+(setf (ningle:route *app* "/" :method :GET)
+      (asdf:system-relative-pathname :rplanet #p"public/assets/index.html"))
 (setf (ningle:route *app* "/columns" :method :POST) 'rplanet/controllers:post-column)
 (setf (ningle:route *app* "/columns" :method :GET) 'rplanet/controllers:get-columns)
 (setf (ningle:route *app* "/tasks" :method :POST) 'rplanet/controllers:post-task)
